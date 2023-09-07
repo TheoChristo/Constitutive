@@ -174,7 +174,14 @@ namespace MGroup.Constitutive.Structural
 		{
 			var nodalNeumann = allBCs.OfType<T>().ToArray();
 			var nodalDirichlet = allBCs.OfType<INodalDisplacementBoundaryCondition>();
-			var validNeumann = nodalNeumann.Where(x => nodalDirichlet.Any(d => d.Node.ID == x.Node.ID && d.DOF == x.DOF) == false).ToArray();
+			//var validNeumann = nodalNeumann.Where(x => nodalDirichlet.Any(d => d.Node.ID == x.Node.ID && d.DOF == x.DOF) == false).ToArray();
+
+			var validLoadsTable = new Table<int, int, bool>();
+			foreach (var x in nodalNeumann) { validLoadsTable[x.Node.ID, algebraicModel.BoundaryConditionsInterpreter.ActiveDofs.GetIdOfDof(x.DOF)] = true; }
+			foreach (var x in nodalDirichlet) { validLoadsTable[x.Node.ID, algebraicModel.BoundaryConditionsInterpreter.ActiveDofs.GetIdOfDof(x.DOF)] = false; }
+			var validNeumann = nodalNeumann.Where(x => validLoadsTable[x.Node.ID, algebraicModel.BoundaryConditionsInterpreter.ActiveDofs.GetIdOfDof(x.DOF)]).ToArray();
+
+
 			if (precedence == BoundaryConditionPrecedence.NoPrecedence && nodalNeumann.Length != validNeumann.Length)
 			{
 				var duplicateLoadNodes = nodalNeumann.Except(validNeumann).Select(x => $"({x.Node.ID}, {x.DOF})").Aggregate(String.Empty, (s, n) => s + n + ", ");
